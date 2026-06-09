@@ -1,4 +1,20 @@
-# Getting Started with Create React App
+# Milk Quality Frontend
+
+This React app is the dashboard for the final year project: an IoT-based milk quality and adulteration detection system.
+
+The frontend displays live sensor data, prediction results, alerts, notifications, and inventory/batch information. The expected sensor fields are:
+
+- `ph`: analog pH sensor reading
+- `temperature`: DS18B20 or DHT22 temperature reading in Celsius
+- `taste`: quality proxy, where `1` means normal and `0` means abnormal
+- `odor`: gas/odor proxy from an MQ gas sensor
+- `fat`: milk fat percentage from a fat sensor, IR method, or manual lab input
+- `turbidity`: turbidity sensor reading in NTU
+- `colour`: colour sensor value, such as TCS34725/RGB intensity
+
+For circuit simulation and device wiring, see `../CIRKIT_SIMULATION_GUIDE.md`.
+
+## Getting Started
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
