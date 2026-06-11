@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/api';
-import { setDemoMode, setToken, setUser, setRefreshToken } from '../services/storage';
+import { setToken, setUser, setRefreshToken } from '../services/storage';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -35,14 +35,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoSupplier = () => {
-    setDemoMode(true);
-    setToken('demo-token-replace-with-real-jwt');
-    setRefreshToken('demo-refresh-token');
-    setUser({ id: 1, name: 'Demo Supplier', email: 'supplier@milk.rw', role: 'supplier' });
-    navigate('/demo');
   };
 
   return (
@@ -99,25 +91,17 @@ export default function Login() {
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
-
-          <button
-            type="button"
-            onClick={handleDemoSupplier}
-            className="w-full border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 font-semibold py-2.5 rounded-lg transition"
-          >
-            Open Public Demo Dashboard
-          </button>
         </form>
 
         {/* Simulation terminal link */}
-        <div className="mt-4 rounded-xl bg-gray-900 border border-emerald-500/30 p-4 text-center">
-          <p className="text-emerald-400 text-xs font-mono uppercase tracking-widest mb-1">⚗ IoT Simulation Terminal</p>
-          <p className="text-gray-400 text-xs mb-3">Test the ML model with live sensor data — no login required</p>
+        <div className="mt-4 rounded-xl bg-blue-50 border border-blue-200 p-4 text-center">
+          <p className="text-blue-800 text-xs font-semibold uppercase tracking-widest mb-1">IoT Simulation Terminal</p>
+          <p className="text-blue-600/70 text-xs mb-3">Test the ML model with live sensor data — no login required</p>
           <Link
             to="/simulation"
-            className="inline-block w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg text-sm transition tracking-wide"
+            className="inline-block w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 rounded-lg text-sm transition"
           >
-            Open Simulation →
+            Open Simulation
           </Link>
         </div>
 
