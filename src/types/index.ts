@@ -53,7 +53,7 @@ export interface MilkRecord extends SensorReading {
   adulteration_type?: string | null;
   percentage?: number | null;
   status?: MilkStatus;
-  reasons?: string[];
+  reasons?: string[] | string;
 }
 
 export interface LiveData extends MilkRecord {

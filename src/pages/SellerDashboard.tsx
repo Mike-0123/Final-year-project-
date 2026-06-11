@@ -9,6 +9,7 @@ import Card from '../components/Card';
 import Alerts from '../components/Alerts';
 import LogsTable from '../components/LogsTable';
 import { ReportsView, SearchView, ProfileView, SettingsView } from '../components/Views';
+import IntakeForm from '../components/IntakeForm';
 import {
   getLiveData, getAllRecords, getAlerts, getNotifications, getBatches,
 } from '../services/api';
@@ -97,7 +98,7 @@ const DecisionSupport = ({ data }: DecisionSupportProps) => {
         <p style={{ fontWeight: 700, color: sell ? '#1d4ed8' : '#dc2626', fontSize: 14 }}>
           {sell ? 'You may sell this milk' : 'Do NOT sell this milk'}
         </p>
-        {!sell && data.reasons?.map((r, i) => (
+        {!sell && data.reasons && (Array.isArray(data.reasons) ? data.reasons : [data.reasons]).map((r: string, i: number) => (
           <p key={i} style={{ fontSize: 12, color: '#dc2626' }}>{r}</p>
         ))}
         {data.adulteration_type && (
@@ -356,6 +357,11 @@ export default function SellerDashboard() {
           </>
         );
       case 'inventory': return <InventoryView batches={batches} />;
+      case 'intake': return (
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <IntakeForm />
+        </div>
+      );
       case 'decision':
         return (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 16 }}>

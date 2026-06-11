@@ -33,6 +33,18 @@ export const signup = (data: SignupPayload): Promise<AxiosResponse<AuthResponse>
   api.post('/api/auth/signup/', data);
 export const logout = (): Promise<AxiosResponse<void>> =>
   api.post('/api/auth/logout/', { refresh: getRefreshToken() });
+export const forgotPassword = (data: { email: string }): Promise<AxiosResponse<void>> =>
+  api.post('/api/auth/forgot-password/', data);
+export const resetPassword = (data: { uidb64: string, token: string, new_password: string }): Promise<AxiosResponse<void>> =>
+  api.post('/api/auth/reset-password/', data);
+export const getUsers = (): Promise<AxiosResponse<import('../types').User[]>> =>
+  api.get('/api/auth/users/');
+export const createUser = (data: Partial<import('../types').User> & { password?: string, username?: string }): Promise<AxiosResponse<import('../types').User>> =>
+  api.post('/api/auth/users/', data);
+export const updateUser = (id: number | string, data: Partial<import('../types').User> & { password?: string }): Promise<AxiosResponse<import('../types').User>> =>
+  api.patch(`/api/auth/users/${id}/`, data);
+export const deleteUser = (id: number | string): Promise<AxiosResponse<void>> =>
+  api.delete(`/api/auth/users/${id}/`);
 
 // Analysis
 export const analyzeMilk = (data: SensorReading): Promise<AxiosResponse<MilkRecord>> =>

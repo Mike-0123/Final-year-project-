@@ -104,6 +104,17 @@ const SENSOR_CONFIG: SensorConfig[] = [
   },
 ];
 
+const DEFAULT_THRESHOLDS = {
+  phMin: 6.6,
+  phMax: 6.8,
+  tempMax: 6,
+  fatMin: 3.2,
+  turbidityMax: 4,
+  colourMin: 245,
+};
+
+type Thresholds = typeof DEFAULT_THRESHOLDS;
+
 const DEFAULT_READING: Required<SensorReading> = {
   ph: 6.7,
   temperature: 5,
@@ -121,11 +132,11 @@ interface SimulationWorkspaceProps {
   isDemo: boolean;
 }
 
-function valueOf(reading: SensorReading, key: SensorKey): number {
+function valueOf(reading: any, key: SensorKey): number {
   return Number(reading[key] ?? DEFAULT_READING[key] ?? 0);
 }
 
-function analyzeLocally(reading: SensorReading): MilkRecord {
+function analyzeLocally(reading: any, thresholds: Thresholds): MilkRecord {
   const ph = valueOf(reading, 'ph');
   const temperature = valueOf(reading, 'temperature');
   const taste = valueOf(reading, 'taste');
@@ -135,21 +146,21 @@ function analyzeLocally(reading: SensorReading): MilkRecord {
   const colour = valueOf(reading, 'colour');
   const reasons: string[] = [];
 
-  if (ph < 6.6) reasons.push('pH sensor reads below the normal fresh milk range');
-  if (ph > 6.8) reasons.push('pH sensor reads above the normal fresh milk range');
-  if (temperature > 6) reasons.push('Temperature sensor shows milk is above safe cold storage range');
+  if (ph < thresholds.phMin) reasons.push('pH sensor reads below the normal fresh milk range');
+  if (ph > thresholds.phMax) reasons.push('pH sensor reads above the normal fresh milk range');
+  if (temperature > thresholds.tempMax) reasons.push('Temperature sensor shows milk is above safe cold storage range');
   if (taste === 0) reasons.push('Taste proxy is marked abnormal');
   if (odor === 0) reasons.push('MQ gas sensor proxy indicates abnormal odor');
-  if (fat < 3.2) reasons.push('Fat content is lower than the expected milk range');
-  if (turbidity > 4) reasons.push('Turbidity sensor shows high cloudiness or impurities');
-  if (colour < 245) reasons.push('Colour sensor value is lower than expected for normal milk');
+  if (fat < thresholds.fatMin) reasons.push('Fat content is lower than the expected milk range');
+  if (turbidity > thresholds.turbidityMax) reasons.push('Turbidity sensor shows high cloudiness or impurities');
+  if (colour < thresholds.colourMin) reasons.push('Colour sensor value is lower than expected for normal milk');
 
   const status = reasons.length === 0 ? 'GOOD' : 'BAD';
   const percentage = status === 'GOOD' ? 0 : Math.min(95, 15 + reasons.length * 12);
   const adulterationType =
     status === 'GOOD' ? null
-    : fat < 3.2 || turbidity > 4 || colour < 245 ? 'Water'
-    : temperature > 6 || odor === 0 || taste === 0 ? 'Spoilage'
+    : fat < thresholds.fatMin || turbidity > thresholds.turbidityMax || colour < thresholds.colourMin ? 'Water'
+    : temperature > thresholds.tempMax || odor === 0 || taste === 0 ? 'Spoilage'
     : 'Suspected Adulteration';
 
   return {
@@ -169,14 +180,14 @@ function analyzeLocally(reading: SensorReading): MilkRecord {
   };
 }
 
-function sensorHealth(reading: SensorReading, key: SensorKey) {
+function sensorHealth(reading: any, key: SensorKey, thresholds: Thresholds) {
   const value = valueOf(reading, key);
-  if (key === 'ph') return value >= 6.6 && value <= 6.8;
-  if (key === 'temperature') return value <= 6;
+  if (key === 'ph') return value >= thresholds.phMin && value <= thresholds.phMax;
+  if (key === 'temperature') return value <= thresholds.tempMax;
   if (key === 'taste' || key === 'odor') return value === 1;
-  if (key === 'fat') return value >= 3.2 && value <= 4.5;
-  if (key === 'turbidity') return value <= 4;
-  if (key === 'colour') return value >= 245;
+  if (key === 'fat') return value >= thresholds.fatMin && value <= 10;
+  if (key === 'turbidity') return value <= thresholds.turbidityMax;
+  if (key === 'colour') return value >= thresholds.colourMin;
   return true;
 }
 
@@ -200,32 +211,30 @@ function SensorVisual({ code, good }: { code: string; good: boolean }) {
 }
 
 export default function SimulationWorkspace({ initialData, onSimulate, onSubmit, isDemo }: SimulationWorkspaceProps) {
-  const [reading, setReading] = useState<SensorReading>({ ...DEFAULT_READING, ...initialData });
+  const [reading, setReading] = useState<any>({ ...DEFAULT_READING, ...initialData });
+  const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
+  const [showConfig, setShowConfig] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const analysis = useMemo(() => analyzeLocally(reading), [reading]);
+  const analysis = useMemo(() => analyzeLocally(reading, thresholds), [reading, thresholds]);
 
   const updateValue = (key: SensorKey, raw: string) => {
-    const value = raw === '' ? 0 : Number(raw);
-    setReading((current) => ({ ...current, [key]: value }));
+    setReading((current: any) => ({ ...current, [key]: raw }));
     setMessage(null);
   };
 
   const changeBy = (key: SensorKey, delta: number) => {
-    setReading((current) => {
+    setReading((current: any) => {
       const currentValue = Number(current[key] ?? DEFAULT_READING[key]);
       const nextValue = Number((currentValue + delta).toFixed(3));
-      return {
-        ...current,
-        [key]: nextValue,
-      };
+      return { ...current, [key]: nextValue };
     });
     setMessage(null);
   };
 
   const reset = () => {
     setReading(DEFAULT_READING);
-    onSimulate(analyzeLocally(DEFAULT_READING));
+    onSimulate(analyzeLocally(DEFAULT_READING, thresholds));
     setMessage('Simulation returned to normal milk values.');
   };
 
@@ -233,11 +242,21 @@ export default function SimulationWorkspace({ initialData, onSimulate, onSubmit,
     setSaving(true);
     setMessage(null);
     try {
+      const cleanReading: SensorReading = {
+        ph: valueOf(reading, 'ph'),
+        temperature: valueOf(reading, 'temperature'),
+        taste: valueOf(reading, 'taste'),
+        odor: valueOf(reading, 'odor'),
+        fat: valueOf(reading, 'fat'),
+        turbidity: valueOf(reading, 'turbidity'),
+        colour: valueOf(reading, 'colour'),
+      };
+      
       if (isDemo || !onSubmit) {
-        onSimulate(analysis);
+        onSimulate(analyzeLocally(cleanReading, thresholds));
         setMessage('Demo simulation applied to the dashboard.');
       } else {
-        const result = await onSubmit(reading);
+        const result = await onSubmit(cleanReading);
         onSimulate(result);
         setMessage('Sensor data sent to the backend and analyzed.');
       }
@@ -257,15 +276,23 @@ export default function SimulationWorkspace({ initialData, onSimulate, onSubmit,
               <h3 className="text-lg font-bold text-gray-800">Milk Sensor Simulation Workspace</h3>
               <p className="text-sm text-gray-500">Change sensor values as if the devices are reading a milk sample.</p>
             </div>
-            <div className={`px-4 py-2 rounded-lg text-sm font-bold ${analysis.status === 'GOOD' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-              {analysis.status}
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowConfig(true)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+              >
+                ⚙️ Set Parameters
+              </button>
+              <div className={`px-4 py-2 rounded-lg text-sm font-bold shadow-sm ${analysis.status === 'GOOD' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
+                {analysis.status}
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {SENSOR_CONFIG.map((sensor) => {
               const value = valueOf(reading, sensor.key);
-              const good = sensorHealth(reading, sensor.key);
+              const good = sensorHealth(reading, sensor.key, thresholds);
               return (
                 <div key={sensor.key} className={`rounded-lg border p-3 ${good ? 'border-blue-100' : 'border-red-200 bg-red-50/40'}`}>
                   <SensorVisual code={sensor.image} good={good} />
@@ -353,7 +380,7 @@ export default function SimulationWorkspace({ initialData, onSimulate, onSubmit,
             <p className="text-sm font-semibold text-gray-700 mb-2">Reason</p>
             {analysis.reasons && analysis.reasons.length > 0 ? (
               <ul className="list-disc pl-5 space-y-1">
-                {analysis.reasons.map((reason, index) => (
+                {(Array.isArray(analysis.reasons) ? analysis.reasons : [analysis.reasons]).map((reason: string, index: number) => (
                   <li key={index} className="text-sm text-gray-600">{reason}</li>
                 ))}
               </ul>
@@ -381,6 +408,52 @@ export default function SimulationWorkspace({ initialData, onSimulate, onSubmit,
           {message && <p className="mt-3 text-xs text-gray-500">{message}</p>}
         </Card>
       </div>
+
+      {/* Threshold Configuration Modal */}
+      {showConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg border border-gray-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Set Simulation Parameters</h3>
+              <button onClick={() => setShowConfig(false)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">pH Min (Default: 6.6)</label>
+                  <input type="number" step="0.1" value={thresholds.phMin} onChange={e => setThresholds({...thresholds, phMin: Number(e.target.value)})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">pH Max (Default: 6.8)</label>
+                  <input type="number" step="0.1" value={thresholds.phMax} onChange={e => setThresholds({...thresholds, phMax: Number(e.target.value)})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Temp °C (Default: 6)</label>
+                  <input type="number" step="0.1" value={thresholds.tempMax} onChange={e => setThresholds({...thresholds, tempMax: Number(e.target.value)})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Fat % (Default: 3.2)</label>
+                  <input type="number" step="0.1" value={thresholds.fatMin} onChange={e => setThresholds({...thresholds, fatMin: Number(e.target.value)})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Turbidity (Default: 4)</label>
+                  <input type="number" step="0.1" value={thresholds.turbidityMax} onChange={e => setThresholds({...thresholds, turbidityMax: Number(e.target.value)})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Colour (Default: 245)</label>
+                  <input type="number" step="1" value={thresholds.colourMin} onChange={e => setThresholds({...thresholds, colourMin: Number(e.target.value)})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                <button type="button" onClick={() => setThresholds(DEFAULT_THRESHOLDS)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition">Reset to Defaults</button>
+                <button type="button" onClick={() => setShowConfig(false)} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shadow-md">
+                  Apply Parameters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

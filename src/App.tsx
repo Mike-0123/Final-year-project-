@@ -3,12 +3,15 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import NotFound from './pages/NotFound';
 import DemoDashboard from './pages/DemoDashboard';
 import SupplierDashboard from './pages/SupplierDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import SimulationPage from './pages/SimulationPage';
+import SimulationWorkspaceStandalone from './pages/SimulationWorkspaceStandalone';
 import { Role, User } from './types';
 import { getToken, getUser } from './services/storage';
 
@@ -32,6 +35,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:uidb64/:token" element={<ResetPassword />} />
         <Route path="/supplier" element={
           <ProtectedRoute role="supplier">
             <SupplierDashboard />
@@ -49,6 +54,7 @@ export default function App() {
         } />
         <Route path="/demo" element={<DemoDashboard />} />
         <Route path="/simulation" element={<SimulationPage />} />
+        <Route path="/workspace" element={<SimulationWorkspaceStandalone />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

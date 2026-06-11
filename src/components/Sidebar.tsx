@@ -20,8 +20,8 @@ const MENUS: Record<Role, MenuConfig> = {
     accent: MILK_GRADIENT,
     items: [
       { id: 'overview', label: 'Dashboard'       },
-      { id: 'simulation', label: 'Simulation'     },
       { id: 'submit',   label: 'Submit Reading'  },
+      { id: 'payments', label: 'Payments'        },
       { id: 'live',     label: 'Live Sensors'    },
       { id: 'records',  label: 'Records'         },
       { id: 'alerts',   label: 'Alerts'          },
@@ -36,6 +36,7 @@ const MENUS: Record<Role, MenuConfig> = {
     accent: MILK_GRADIENT,
     items: [
       { id: 'overview',  label: 'Dashboard'        },
+      { id: 'intake',    label: 'Milk Intake'      },
       { id: 'inventory', label: 'Inventory'        },
       { id: 'decision',  label: 'Decision Support' },
       { id: 'trends',    label: 'Trends'           },
@@ -53,6 +54,7 @@ const MENUS: Record<Role, MenuConfig> = {
     items: [
       { id: 'overview', label: 'Dashboard'   },
       { id: 'users',    label: 'Users'       },
+      { id: 'devices',  label: 'Devices'     },
       { id: 'records',  label: 'All Records' },
       { id: 'alerts',   label: 'Alerts'      },
       { id: 'logs',     label: 'System Logs' },

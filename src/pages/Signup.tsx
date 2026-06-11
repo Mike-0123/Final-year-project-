@@ -9,6 +9,7 @@ export default function Signup() {
     username: '',
     email: '',
     password: '',
+    confirm_password: '',
     role: 'SUPPLIER' as BackendRole,
   });
   const [error, setError] = useState('');
@@ -23,6 +24,12 @@ export default function Signup() {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (form.password !== form.confirm_password) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setLoading(true);
     try {
       await signup(form);
@@ -104,6 +111,19 @@ export default function Signup() {
               type="password"
               name="password"
               value={form.password}
+              onChange={handleChange}
+              required
+              placeholder="••••••••"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+            <input
+              type="password"
+              name="confirm_password"
+              value={form.confirm_password}
               onChange={handleChange}
               required
               placeholder="••••••••"

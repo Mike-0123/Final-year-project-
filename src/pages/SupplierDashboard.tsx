@@ -8,8 +8,8 @@ import Card from '../components/Card';
 import SensorData from '../components/SensorData';
 import Alerts from '../components/Alerts';
 import LogsTable from '../components/LogsTable';
-import SimulationWorkspace from '../components/SimulationWorkspace';
 import { ReportsView, SearchView, ProfileView, SettingsView } from '../components/Views';
+import PaymentsView from '../components/PaymentsView';
 import { getLiveData, getAllRecords, getAlerts, getNotifications, analyzeMilk } from '../services/api';
 import { DEMO_LIVE, DEMO_RECORDS, DEMO_ALERTS, DEMO_NOTIFICATIONS } from '../demo';
 import { MilkRecord, AlertItem, NotificationItem, LiveData, SensorReading } from '../types';
@@ -100,11 +100,14 @@ const SpoilageCard = ({ hours }: SpoilageCardProps) => (
 
 // ── Explainable AI card ──────────────────────────────────────────────────
 
-interface ExplainableAIProps { reasons?: string[]; status: string }
+interface ExplainableAIProps { reasons?: string[] | string; status: string }
 
-const ExplainableAI = ({ reasons = [], status }: ExplainableAIProps) => (
+const ExplainableAI = ({ reasons = [], status }: ExplainableAIProps) => {
+  const reasonsList = Array.isArray(reasons) ? reasons : (typeof reasons === 'string' ? [reasons] : []);
+  
+  return (
   <Card title="Why This Result?">
-    {reasons.length === 0 ? (
+    {reasonsList.length === 0 ? (
       <p style={{ color: '#94a3b8', fontSize: 13 }}>No explanation available</p>
     ) : (
       <div>
@@ -112,14 +115,14 @@ const ExplainableAI = ({ reasons = [], status }: ExplainableAIProps) => (
           Milk is <span style={{ color: status === 'GOOD' ? '#16a34a' : '#dc2626', fontWeight: 800 }}>{status}</span> because:
         </p>
         <ul style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {reasons.map((r, i) => (
+          {reasonsList.map((r, i) => (
             <li key={i} style={{ fontSize: 13, color: '#64748b' }}>{r}</li>
           ))}
         </ul>
       </div>
     )}
   </Card>
-);
+)};
 
 // ── Area chart for last 20 records ───────────────────────────────────────
 
@@ -261,11 +264,13 @@ function SubmitReadingView({ onSuccess }: { onSuccess: () => void }) {
             <div><span className="text-gray-500">Adulteration Type</span><p className="font-bold capitalize">{result.adulteration_type || 'None'}</p></div>
             <div><span className="text-gray-500">Percentage</span><p className="font-bold">{result.percentage != null ? `${result.percentage}%` : '0%'}</p></div>
           </div>
-          {result.reasons && result.reasons.length > 0 && (
+          {result.reasons && (Array.isArray(result.reasons) ? result.reasons.length > 0 : typeof result.reasons === 'string') && (
             <div className="mt-3">
               <p className="text-sm font-medium text-gray-700 mb-1">Reasons:</p>
               <ul className="list-disc pl-5 space-y-1">
-                {result.reasons.map((r, i) => <li key={i} className="text-sm text-gray-600">{r}</li>)}
+                {Array.isArray(result.reasons) 
+                  ? result.reasons.map((r, i) => <li key={i} className="text-sm text-gray-600">{r}</li>)
+                  : <li className="text-sm text-gray-600">{result.reasons}</li>}
               </ul>
             </div>
           )}
@@ -362,17 +367,10 @@ export default function SupplierDashboard() {
             <LogsTable records={records} />
           </>
         );
-      case 'simulation':
-        return (
-          <SimulationWorkspace
-            initialData={demo}
-            onSimulate={applySimulation}
-            onSubmit={submitSimulation}
-            isDemo={isDemo()}
-          />
-        );
       case 'submit':
         return <SubmitReadingView onSuccess={fetchAll} />;
+      case 'payments':
+        return <PaymentsView />;
       case 'live':
         return (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 16 }}>

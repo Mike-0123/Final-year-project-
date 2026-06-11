@@ -72,7 +72,12 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               name="password"
@@ -93,17 +98,7 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Simulation terminal link */}
-        <div className="mt-4 rounded-xl bg-blue-50 border border-blue-200 p-4 text-center">
-          <p className="text-blue-800 text-xs font-semibold uppercase tracking-widest mb-1">IoT Simulation Terminal</p>
-          <p className="text-blue-600/70 text-xs mb-3">Test the ML model with live sensor data — no login required</p>
-          <Link
-            to="/simulation"
-            className="inline-block w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 rounded-lg text-sm transition"
-          >
-            Open Simulation
-          </Link>
-        </div>
+
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Don't have an account?{' '}
