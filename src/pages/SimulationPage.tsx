@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 
-const BASE_URL = 'http://localhost:8000';
-
-// ── Colours ────────────────────────────────────────────────────
 const BLUE      = '#1d4ed8';
 const BLUE_DARK = '#1e3a8a';
 const BLUE_PALE = '#eff6ff';
@@ -372,12 +369,38 @@ function SensorCard({ sensor, value, driftOn, onChange }: {
 
       {/* Slider */}
       {!binary && (
-        <input
-          type="range" min={sensor.min} max={sensor.max} step={sensor.step} value={value}
-          disabled={driftOn && sensor.noise > 0}
-          onChange={e => onChange(parseFloat(e.target.value))}
-          style={{ width:'100%', accentColor: ok ? BLUE : RED, opacity: driftOn && sensor.noise>0 ? 0.4 : 1 }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          <button 
+            onClick={() => onChange(Math.max(sensor.min, value - sensor.step))}
+            disabled={driftOn && sensor.noise > 0}
+            style={{ 
+              width: 26, height: 26, flexShrink: 0, borderRadius: '50%', border: `1.5px solid ${ok ? BLUE_BDR : '#fca5a5'}`, 
+              background: WHITE, color: ok ? BLUE : RED, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              cursor: (driftOn && sensor.noise > 0) ? 'not-allowed' : 'pointer', fontSize: 18, lineHeight: 1, padding: 0, fontWeight: 'bold',
+              opacity: (driftOn && sensor.noise > 0) ? 0.4 : 1 
+            }}
+          >
+            −
+          </button>
+          <input
+            type="range" min={sensor.min} max={sensor.max} step={sensor.step} value={value}
+            disabled={driftOn && sensor.noise > 0}
+            onChange={e => onChange(parseFloat(e.target.value))}
+            style={{ flex: 1, minWidth: 0, accentColor: ok ? BLUE : RED, opacity: driftOn && sensor.noise>0 ? 0.4 : 1 }}
+          />
+          <button 
+            onClick={() => onChange(Math.min(sensor.max, value + sensor.step))}
+            disabled={driftOn && sensor.noise > 0}
+            style={{ 
+              width: 26, height: 26, flexShrink: 0, borderRadius: '50%', border: `1.5px solid ${ok ? BLUE_BDR : '#fca5a5'}`, 
+              background: WHITE, color: ok ? BLUE : RED, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              cursor: (driftOn && sensor.noise > 0) ? 'not-allowed' : 'pointer', fontSize: 18, lineHeight: 1, padding: 0, fontWeight: 'bold',
+              opacity: (driftOn && sensor.noise > 0) ? 0.4 : 1
+            }}
+          >
+            +
+          </button>
+        </div>
       )}
     </div>
   );
@@ -401,7 +424,7 @@ export default function SimulationPage() {
 
   useEffect(() => {
     const ping = async () => {
-      try { await axios.get(`${BASE_URL}/api/analyze/latest/`, {timeout:3000}); setConn(true); }
+      try { await api.get(`/api/analyze/latest/`, {timeout:3000}); setConn(true); }
       catch(e:any){ setConn(!!e?.response); }
     };
     ping();
@@ -419,13 +442,15 @@ export default function SimulationPage() {
     setSending(true);
     try {
       const odorBinary = vRef.current.odor <= 300 ? 1 : 0;
-      const res = await axios.post(`${BASE_URL}/api/analyze/`, {
+      const res = await api.post(`/api/analyze/`, {
         ...vRef.current, odor: odorBinary,
         supplier_id:'SIM-001', supplier_name:'Simulation Terminal',
         location_name:'Virtual Lab', latitude:0, longitude:0,
       }, { timeout:8000 });
       setSentId(res.data.id);
-    } catch { }
+    } catch (e: any) {
+      console.error(e);
+    }
     finally { setSending(false); }
   }, []);
 

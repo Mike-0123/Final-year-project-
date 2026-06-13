@@ -67,9 +67,10 @@ export interface AlertItem {
 }
 
 export interface NotificationItem {
-  id?: number;
+  id: number | string;
   message: string;
   read: boolean;
+  created_at?: string;
 }
 
 // Matches backend Inventory model

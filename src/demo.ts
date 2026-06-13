@@ -49,9 +49,9 @@ export const DEMO_ALERTS: AlertItem[] = [
 ];
 
 export const DEMO_NOTIFICATIONS: NotificationItem[] = [
-  { message: 'Milk quality dropped - check pH, temperature, gas, turbidity, and colour readings', read: false },
-  { message: 'New batch submitted by supplier', read: false },
-  { message: 'System health check passed', read: true },
+  { id: 1, message: 'Milk quality dropped - check pH, temperature, gas, turbidity, and colour readings', read: false },
+  { id: 2, message: 'New batch submitted by supplier', read: false },
+  { id: 3, message: 'System health check passed', read: true },
 ];
 
 export const DEMO_BATCHES: Batch[] = [

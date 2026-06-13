@@ -216,11 +216,15 @@ export default function SimulationWorkspace({ initialData, onSimulate, onSubmit,
   const [showConfig, setShowConfig] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const analysis = useMemo(() => analyzeLocally(reading, thresholds), [reading, thresholds]);
+  const [backendAnalysis, setBackendAnalysis] = useState<MilkRecord | null>(null);
+  
+  const localAnalysis = useMemo(() => analyzeLocally(reading, thresholds), [reading, thresholds]);
+  const analysis = backendAnalysis || localAnalysis;
 
   const updateValue = (key: SensorKey, raw: string) => {
     setReading((current: any) => ({ ...current, [key]: raw }));
     setMessage(null);
+    setBackendAnalysis(null);
   };
 
   const changeBy = (key: SensorKey, delta: number) => {
@@ -230,6 +234,7 @@ export default function SimulationWorkspace({ initialData, onSimulate, onSubmit,
       return { ...current, [key]: nextValue };
     });
     setMessage(null);
+    setBackendAnalysis(null);
   };
 
   const reset = () => {
@@ -258,7 +263,8 @@ export default function SimulationWorkspace({ initialData, onSimulate, onSubmit,
       } else {
         const result = await onSubmit(cleanReading);
         onSimulate(result);
-        setMessage('Sensor data sent to the backend and analyzed.');
+        setBackendAnalysis(result);
+        setMessage('Sensor data sent to the backend and analyzed by the ML Model.');
       }
     } catch (error: any) {
       setMessage(error?.response?.data ? JSON.stringify(error.response.data) : 'Backend submission failed.');
@@ -354,9 +360,9 @@ export default function SimulationWorkspace({ initialData, onSimulate, onSubmit,
           </div>
         </Card>
 
-        <Card title="Simulation Result">
+        <Card title={backendAnalysis ? "ML Model Result" : "Local Estimation"}>
           <div className={`rounded-lg p-4 mb-4 ${analysis.status === 'GOOD' ? 'bg-green-50 border border-green-300' : 'bg-red-50 border border-red-300'}`}>
-            <p className="text-xs text-gray-500 uppercase">Predicted Status</p>
+            <p className="text-xs text-gray-500 uppercase">{backendAnalysis ? "Model Predicted Status" : "Estimated Status"}</p>
             <p className={`text-3xl font-extrabold ${analysis.status === 'GOOD' ? 'text-green-600' : 'text-red-600'}`}>{analysis.status}</p>
           </div>
           <div className="space-y-3 text-sm">
