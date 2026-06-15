@@ -80,3 +80,14 @@ export interface Batch {
   status: string;
   updated_at?: string;
 }
+
+export interface StorageTank {
+  id: number;
+  name: string;
+  capacity: number;
+  current_level: number;
+  location?: string | null;
+  updated_at?: string;
+  fill_percentage?: number;
+}
+

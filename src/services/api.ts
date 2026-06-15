@@ -111,4 +111,21 @@ export const getLiveData = (): Promise<AxiosResponse<LiveData>> => api.get('/api
 export const getInventory = (): Promise<AxiosResponse<import('../types').Batch[]>> =>
   api.get('/api/inventory/');
 
+// Storage Tanks and Restock
+export const getTanks = (): Promise<AxiosResponse<import('../types').StorageTank[]>> =>
+  api.get('/api/inventory/tanks/');
+export const createTank = (data: Partial<import('../types').StorageTank>): Promise<AxiosResponse<import('../types').StorageTank>> =>
+  api.post('/api/inventory/tanks/', data);
+export const sellMilk = (tankId: number, quantity: number): Promise<AxiosResponse<any>> =>
+  api.post(`/api/inventory/tanks/${tankId}/sell/`, { quantity });
+export const addMilkToTank = (tankId: number, quantity: number): Promise<AxiosResponse<any>> =>
+  api.post(`/api/inventory/tanks/${tankId}/add/`, { quantity });
+export const getSuppliers = (): Promise<AxiosResponse<any[]>> =>
+  api.get('/api/inventory/suppliers/');
+export const requestRestock = (supplierId: number, message?: string): Promise<AxiosResponse<any>> =>
+  api.post('/api/inventory/restock/', { supplier_id: supplierId, message });
+export const replyRestockRequest = (data: { notification_id: number; quantity: number; message?: string }): Promise<AxiosResponse<any>> =>
+  api.post('/api/inventory/restock/reply/', data);
+
 export default api;
+

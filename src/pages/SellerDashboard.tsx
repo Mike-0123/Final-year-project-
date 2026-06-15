@@ -12,9 +12,10 @@ import { ReportsView, SearchView, ProfileView, SettingsView } from '../component
 import IntakeForm from '../components/IntakeForm';
 import {
   getLiveData, getAllRecords, getAlerts, getNotifications, getBatches,
+  getTanks, sellMilk, getSuppliers, requestRestock
 } from '../services/api';
 import { DEMO_LIVE, DEMO_RECORDS, DEMO_ALERTS, DEMO_NOTIFICATIONS, DEMO_BATCHES } from '../demo';
-import { MilkRecord, AlertItem, NotificationItem, Batch, LiveData } from '../types';
+import { MilkRecord, AlertItem, NotificationItem, Batch, LiveData, StorageTank } from '../types';
 import { isDemoMode } from '../services/storage';
 
 const isDemo = isDemoMode;
@@ -33,8 +34,8 @@ const DecisionCard = ({ status }: DecisionCardProps) => {
       border: `2px solid ${sell ? '#1d4ed8' : '#dc2626'}`,
       textAlign: 'center',
     }}>
-      <p style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 8 }}>
-        Quality Decision
+      <p style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 8, fontWeight: 'bold' }}>
+        Live Intake Quality Scan
       </p>
       <p style={{ fontSize: 48, fontWeight: 900, color: sell ? '#1d4ed8' : '#dc2626', lineHeight: 1, marginBottom: 8 }}>
         {sell ? 'SELL' : 'REJECT'}
@@ -111,14 +112,139 @@ const DecisionSupport = ({ data }: DecisionSupportProps) => {
 
 // ── Inventory view ───────────────────────────────────────────────────────
 
-interface InventoryViewProps { batches?: Batch[] }
+const TanksManager = ({ tanks, suppliers, onUpdate }: { tanks: StorageTank[], suppliers: any[], onUpdate: () => void }) => {
+  const [sellTankId, setSellTankId] = useState<number | ''>('');
+  const [sellQty, setSellQty] = useState('');
+  const [restockSupplierId, setRestockSupplierId] = useState<number | ''>('');
+  const [restockMessage, setRestockMessage] = useState('');
+  
+  const [newTankName, setNewTankName] = useState('');
+  const [newTankCapacity, setNewTankCapacity] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
 
-const InventoryView = ({ batches = [] }: InventoryViewProps) => {
+  const handleSell = async () => {
+    if (!sellTankId || !sellQty) return;
+    try {
+      await import('../services/api').then(m => m.sellMilk(Number(sellTankId), Number(sellQty)));
+      setSellQty('');
+      onUpdate();
+    } catch (e) { alert("Failed to sell milk"); }
+  };
+  
+  const handleRestock = async () => {
+    if (!restockSupplierId) return;
+    try {
+      await import('../services/api').then(m => m.requestRestock(Number(restockSupplierId), restockMessage));
+      alert('Restock requested!');
+      setRestockMessage('');
+      onUpdate();
+    } catch (e) { alert("Failed to request restock"); }
+  };
+
+  const handleCreateTank = async () => {
+    if (!newTankName || !newTankCapacity) return;
+    try {
+      await import('../services/api').then(m => m.createTank({
+        name: newTankName,
+        capacity: Number(newTankCapacity),
+        current_level: 0
+      }));
+      setNewTankName('');
+      setNewTankCapacity('');
+      setIsAdding(false);
+      onUpdate();
+    } catch (e) { alert("Failed to create tank"); }
+  };
+
+  return (
+    <div className="space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-bold text-gray-800">Storage Tanks</h3>
+        <button 
+          onClick={() => setIsAdding(!isAdding)}
+          className="text-sm bg-blue-50 text-blue-700 font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 transition"
+        >
+          {isAdding ? 'Cancel' : '+ Add Tank'}
+        </button>
+      </div>
+
+      {isAdding && (
+        <div className="flex gap-3 items-end bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+          <div className="flex-1">
+            <label className="block text-xs font-bold text-blue-900 mb-1">Tank Name</label>
+            <input type="text" placeholder="e.g. Tank A" value={newTankName} onChange={e => setNewTankName(e.target.value)} className="w-full border border-blue-200 p-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-bold text-blue-900 mb-1">Capacity (Liters)</label>
+            <input type="number" placeholder="e.g. 500" value={newTankCapacity} onChange={e => setNewTankCapacity(e.target.value)} className="w-full border border-blue-200 p-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          </div>
+          <button onClick={handleCreateTank} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded text-sm transition h-[38px]">
+            Save Tank
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {tanks.length === 0 ? <p className="text-sm text-gray-400">No tanks configured.</p> : tanks.map(tank => {
+          const fill = tank.fill_percentage || 0;
+          const isLow = fill < 20;
+          return (
+            <div key={tank.id} className="p-4 border rounded-lg bg-gray-50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold text-gray-700">{tank.name}</span>
+                <span className={`text-xs px-2 py-1 rounded-full font-bold ${isLow ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                  {isLow ? 'Low Level' : 'Normal'}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden">
+                <div className={`h-4 rounded-full transition-all duration-500 ${isLow ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${Math.min(fill, 100)}%` }}></div>
+              </div>
+              <div className="text-sm text-gray-500 flex justify-between font-medium">
+                <span>{tank.current_level} L / {tank.capacity} L</span>
+                <span>{fill.toFixed(1)}%</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <div className="border p-4 rounded-lg">
+           <h4 className="font-bold text-gray-700 mb-2">Sell Milk</h4>
+           <div className="flex flex-col gap-3">
+              <select className="border border-gray-300 p-2 rounded text-sm outline-none focus:border-blue-500" value={sellTankId} onChange={e => setSellTankId(Number(e.target.value))}>
+                <option value="">Select Tank</option>
+                {tanks.map(t => <option key={t.id} value={t.id}>{t.name} ({t.current_level}L)</option>)}
+              </select>
+              <input type="number" placeholder="Quantity (Liters)" className="border border-gray-300 p-2 rounded text-sm outline-none focus:border-blue-500" value={sellQty} onChange={e => setSellQty(e.target.value)} />
+              <button className="bg-blue-600 hover:bg-blue-700 transition-colors text-white p-2 rounded text-sm font-bold shadow-sm" onClick={handleSell}>Sell Milk</button>
+           </div>
+        </div>
+        <div className="border p-4 rounded-lg">
+           <h4 className="font-bold text-gray-700 mb-2">Request Restock</h4>
+           <div className="flex flex-col gap-3">
+              <select className="border border-gray-300 p-2 rounded text-sm outline-none focus:border-blue-500" value={restockSupplierId} onChange={e => setRestockSupplierId(Number(e.target.value))}>
+                <option value="">Select Supplier</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name || s.email}</option>)}
+              </select>
+              <input type="text" placeholder="Message (optional)" className="border border-gray-300 p-2 rounded text-sm outline-none focus:border-blue-500" value={restockMessage} onChange={e => setRestockMessage(e.target.value)} />
+              <button className="bg-orange-500 hover:bg-orange-600 transition-colors text-white p-2 rounded text-sm font-bold shadow-sm" onClick={handleRestock}>Request Restock</button>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface InventoryViewProps { batches?: Batch[]; tanks?: StorageTank[]; suppliers?: any[]; onUpdate: () => void; }
+
+const InventoryView = ({ batches = [], tanks = [], suppliers = [], onUpdate }: InventoryViewProps) => {
   const total = batches.reduce((s, b) => s + (b.milk_quantity || 0), 0);
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
+      <TanksManager tanks={tanks} suppliers={suppliers} onUpdate={onUpdate} />
       <div>
-        <h3 className="text-lg font-bold text-gray-800">Inventory</h3>
+        <h3 className="text-lg font-bold text-gray-800">Inventory Batches</h3>
         <p className="text-sm text-gray-500">Milk batches currently in stock</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -288,6 +414,8 @@ export default function SellerDashboard() {
   const [alerts, setAlerts]               = useState<AlertItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [batches, setBatches]             = useState<Batch[]>([]);
+  const [tanks, setTanks]                 = useState<StorageTank[]>([]);
+  const [suppliers, setSuppliers]         = useState<any[]>([]);
   const [lastUpdated, setLastUpdated]     = useState<Date | null>(null);
 
   const fetchAll = useCallback(async () => {
@@ -301,14 +429,16 @@ export default function SellerDashboard() {
       return;
     }
     try {
-      const [live, recs, alrts, notifs, batchRes] = await Promise.allSettled([
-        getLiveData(), getAllRecords(), getAlerts(), getNotifications(), getBatches(),
+      const [live, recs, alrts, notifs, batchRes, tanksRes, suppRes] = await Promise.allSettled([
+        getLiveData(), getAllRecords(), getAlerts(), getNotifications(), getBatches(), getTanks(), getSuppliers()
       ]);
       if (live.status     === 'fulfilled') setLiveData(live.value.data);
       if (recs.status     === 'fulfilled') setRecords(recs.value.data);
       if (alrts.status    === 'fulfilled') setAlerts(alrts.value.data);
       if (notifs.status   === 'fulfilled') setNotifications(notifs.value.data);
       if (batchRes.status === 'fulfilled') setBatches(batchRes.value.data);
+      if (tanksRes.status === 'fulfilled') setTanks(tanksRes.value.data);
+      if (suppRes.status  === 'fulfilled') setSuppliers(suppRes.value.data);
       setLastUpdated(new Date());
     } catch (_) {}
   }, []);
@@ -325,38 +455,47 @@ export default function SellerDashboard() {
     switch (view) {
       case 'overview':
         return (
-          <>
-            {/* 1. Decision card — full width */}
-            <div style={{ marginBottom: 16 }}>
+          <div className="space-y-6">
+            <TanksManager tanks={tanks} suppliers={suppliers} onUpdate={fetchAll} />
+
+            {/* Business Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <div className="text-sm text-gray-500 font-medium">Total Volume in Stock</div>
+                <div className="text-3xl font-extrabold text-blue-900 mt-2">
+                  {batches.reduce((s, b) => s + (b.milk_quantity || 0), 0).toFixed(1)} L
+                </div>
+              </Card>
+              <Card>
+                <div className="text-sm text-gray-500 font-medium">Active Batches</div>
+                <div className="text-3xl font-extrabold text-gray-800 mt-2">{batches.length}</div>
+              </Card>
+              <Card>
+                <div className="text-sm text-gray-500 font-medium">Active Alerts</div>
+                <div className="text-3xl font-extrabold text-orange-600 mt-2">{alerts.length}</div>
+              </Card>
+            </div>
+
+            {/* Live Intake Decision */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <DecisionCard status={demo.status} />
-            </div>
-
-            {/* 2. Explanation comes immediately after the decision */}
-            <div style={{ marginBottom: 16 }}>
-              <DecisionSupport data={demo} />
-            </div>
-
-            {/* 3. Pie chart + adulteration + inventory */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 16, marginBottom: 16 }}>
-              <QualityPieChart records={records} />
-              <AdulterationSummary type={demo.adulteration_type} percentage={demo.percentage} />
-              <InventoryStat batches={batches} />
-            </div>
-
-            {/* Line chart */}
-            {records.length > 1 && (
-              <div style={{ marginBottom: 16 }}>
-                <TrendChart records={records} />
+              <div className="flex flex-col gap-4">
+                <DecisionSupport data={demo} />
+                <AdulterationSummary type={demo.adulteration_type} percentage={demo.percentage} />
               </div>
-            )}
-
-            <div style={{ marginBottom: 16 }}>
-              <Alerts alerts={alerts} />
             </div>
-            <LogsTable records={records} />
-          </>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <QualityPieChart records={records} />
+              </div>
+              <div className="lg:col-span-2">
+                <Alerts alerts={alerts} />
+              </div>
+            </div>
+          </div>
         );
-      case 'inventory': return <InventoryView batches={batches} />;
+      case 'inventory': return <InventoryView batches={batches} tanks={tanks} suppliers={suppliers} onUpdate={fetchAll} />;
       case 'intake': return (
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
           <IntakeForm />

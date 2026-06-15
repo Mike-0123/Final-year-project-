@@ -20,10 +20,8 @@ const MENUS: Record<Role, MenuConfig> = {
     accent: MILK_GRADIENT,
     items: [
       { id: 'overview', label: 'Dashboard'       },
-      { id: 'submit',   label: 'Submit Reading'  },
       { id: 'payments', label: 'Payments'        },
-      { id: 'live',     label: 'Live Sensors'    },
-      { id: 'records',  label: 'Records'         },
+      { id: 'records',  label: 'Deliveries'      },
       { id: 'alerts',   label: 'Alerts'          },
       { id: 'reports',  label: 'Reports'         },
       { id: 'search',   label: 'Search'          },
